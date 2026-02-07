@@ -5,7 +5,7 @@ import auth from "../middleware/auth.middleware.js";
 //   generatePracticeTest,
 //   getPracticeTest
 // } from "../Controller/practice.controller.js";
-import { generatePracticeTest, getAttemptHistory, getPracticeTest, getTestResult, submitPracticeTest } from "../Controller/practice.controller.js";
+import { generatePracticeTest, getAttemptHistory, getPracticeTest, getTestResult, submitPracticeTest } from "../controller/practice.controller.js";
 const router = express.Router();
 
 /* Generate test */
