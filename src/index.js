@@ -20,7 +20,16 @@ connectDB();
 const app = express();
 
 /* Middleware*/
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",     // Vite dev
+      process.env.FRONTEND_URI // production frontend
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true
+  })
+);
 app.use(express.json());
 
 /* Routes */
