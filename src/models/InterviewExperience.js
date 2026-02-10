@@ -63,6 +63,11 @@ const interviewExperienceSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+ 
+interviewExperienceSchema.index({
+  companyId: 1,
+  role: 1
+});
 
 export default mongoose.model(
   "InterviewExperience",

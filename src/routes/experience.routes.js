@@ -3,6 +3,7 @@ import {
   createExperience,
   getAllExperiences,
   getExperienceById,
+  getMyExperiences,
   upvoteExperience
 } from "../controller/experience.controller.js";
 import auth from "../middleware/auth.middleware.js";
@@ -11,7 +12,9 @@ const router = express.Router();
 
 router.post("/", auth, createExperience);
 router.get("/", getAllExperiences);
+router.get("/my",auth,getMyExperiences);
 router.get("/:id",getExperienceById)
 router.post("/:id/upvote", auth, upvoteExperience);
+
 
 export default router;

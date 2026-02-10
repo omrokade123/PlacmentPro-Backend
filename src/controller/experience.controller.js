@@ -85,6 +85,7 @@ export const createExperience = async (req, res) => {
     });
 
     res.status(201).json({
+      success: true,
       message: "Interview experience shared successfully",
       experience
     });
@@ -100,7 +101,7 @@ export const createExperience = async (req, res) => {
 // get all experinces
 export const getAllExperiences = async (req, res) => {
   try {
-    const experiences = await InterviewExperience.find({status: "approved"})
+    const experiences = await InterviewExperience.find({ status: "approved" })
       .populate("companyId", "name")
       .populate("userId", "name")
       .sort({ createdAt: -1 });
@@ -156,5 +157,32 @@ export const upvoteExperience = async (req, res) => {
     res.status(500).json({
       message: "Upvote failed"
     });
+  }
+};
+
+export const getMyExperiences = async (req, res) => {
+
+  try {
+
+    if (!req.user) {
+      return res.status(401).json({
+        message: "Unauthorized"
+      });
+    }
+    const experiences =
+      await InterviewExperience.find({
+        userId: req.user.userId
+      })
+        .populate("companyId", "name")
+        .sort({ createdAt: -1 });
+
+    res.json(experiences);
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      message: "Failed to fetch experiences"
+    });
+
   }
 };

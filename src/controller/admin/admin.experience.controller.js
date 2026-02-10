@@ -48,7 +48,7 @@ export const approveExperience = async (req, res) => {
 export const rejectExperience = async (req, res) => {
 
   const { id } = req.params;
-  const { remark } = req.body;
+  // const { remark } = req.body;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({
@@ -61,7 +61,7 @@ export const rejectExperience = async (req, res) => {
     {
       status: "rejected",
       reviewedBy: req.user.userId,
-      adminRemarks: remark || "Rejected by admin"
+      adminRemarks: "Rejected by admin"
     },
     { new: true }
   );
