@@ -1,37 +1,41 @@
 import mongoose from "mongoose";
 
-const questionSchema = new mongoose.Schema(
-{
+const questionSchema = new mongoose.Schema({
+
   questionText: {
     type: String,
     required: true
   },
 
   options: [{
-    type: String
+    text: String,
+    isCorrect: Boolean
   }],
-
-  correctAnswer: {
-    type: String,
-    required: true
-  },
 
   explanation: String,
 
   topic: {
     type: String,
-    required: true
+    required: true,
+    index: true
   },
 
   difficulty: {
     type: String,
     enum: ["easy", "medium", "hard"],
-    required: true
+    required: true,
+    index: true
+  },
+
+  difficultyScore: {
+    type: Number,
+    default: 2
   },
 
   companyTags: [{
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Company"
+    ref: "Company",
+    index: true
   }],
 
   questionType: {
@@ -41,8 +45,33 @@ const questionSchema = new mongoose.Schema(
   },
 
   metadata: {
-    avgTimeTaken: Number,
-    successRate: Number
+    avgTimeTaken: {
+      type: Number,
+      default: 0
+    },
+    successRate: {
+      type: Number,
+      default: 0
+    },
+    attemptCount: {
+      type: Number,
+      default: 0
+    }
+  },
+
+  cognitiveLevel: {
+    type: String,
+    enum: [
+      "remember",
+      "understand",
+      "apply",
+      "analyze"
+    ]
+  },
+
+  isActive: {
+    type: Boolean,
+    default: true
   },
 
   createdBy: {
@@ -50,8 +79,9 @@ const questionSchema = new mongoose.Schema(
     ref: "User"
   }
 
-},
-{ timestamps: true }
-);
+}, { timestamps: true });
 
-export default mongoose.model("Question", questionSchema);
+export default mongoose.model(
+  "Question",
+  questionSchema
+);

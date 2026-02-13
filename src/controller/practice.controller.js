@@ -2,6 +2,8 @@ import Question from "../models/practice model/Question.js";
 import PracticeTest from "../models/PracticeTest.js";
 import PracticeAttempt from "../models/PracticeAttempt.js";
 import mongoose from "mongoose";
+import User from "../models/User.js";
+
 
 export const generatePracticeTest = async (req, res) => {
 
@@ -80,7 +82,10 @@ export const generatePracticeTest = async (req, res) => {
 
 export const getPracticeTest = async (req, res) => {
 
-  const test = await PracticeTest.findById(req.params.id)
+  const test = await PracticeTest.findById({
+    _id: req.params.id,
+    userId: req.user.userId
+  })
     .populate({
       path: "questions",
       select: "questionText options topic difficulty"
@@ -94,6 +99,7 @@ export const getPracticeTest = async (req, res) => {
 
   res.json(test);
 };
+
 
 
 export const submitPracticeTest = async (req, res) => {
@@ -113,174 +119,177 @@ export const submitPracticeTest = async (req, res) => {
       });
     }
 
-    // Prevent double submission
-    if (test.isSubmitted) {
+    // Prevent duplicate attempt
+    const existing = await PracticeAttempt.findOne({
+      userId: req.user.userId,
+      testId
+    });
+
+    if (existing) {
       return res.status(409).json({
-        message: "Test already submitted",
-        redirect: `/practice/result/${test._id}`
+        message: "Already attempted",
+        attemptId: existing._id
       });
     }
 
     let score = 0;
-
     const topicStats = {};
 
     const results = test.questions.map(q => {
 
       const userAnswer = answers[q._id.toString()];
-      const correct = userAnswer === q.correctAnswer;
 
-      if (correct) score++;
+      // ⭐ find correct option
+      const correctOption = q.options.find(o => o.isCorrect)?.text;
 
-      // Track topics
+      const isCorrect = userAnswer === correctOption;
+
+      if (isCorrect) score++;
+
+      // topic tracking
       if (!topicStats[q.topic]) {
-        topicStats[q.topic] = {
-          total: 0,
-          correct: 0
-        };
+        topicStats[q.topic] = { total: 0, correct: 0 };
       }
 
       topicStats[q.topic].total++;
 
-      if (correct) {
-        topicStats[q.topic].correct++;
-      }
+      if (isCorrect) topicStats[q.topic].correct++;
 
       return {
         questionId: q._id,
         selectedAnswer: userAnswer,
-        isCorrect: correct
+        isCorrect
       };
     });
 
     const weakTopics = [];
     const strongTopics = [];
 
-    Object.entries(topicStats).forEach(
-      ([topic, stats]) => {
+    Object.entries(topicStats).forEach(([topic, stats]) => {
+      const acc = stats.correct / stats.total;
 
-        const accuracy =
-          stats.correct / stats.total;
+      if (acc < 0.5) weakTopics.push(topic);
+      if (acc >= 0.8) strongTopics.push(topic);
+    });
 
-        if (accuracy < 0.5) {
-          weakTopics.push(topic);
-        }
+    const accuracy = (score / test.questions.length) * 100;
 
-        if (accuracy >= 0.8) {
-          strongTopics.push(topic);
-        }
-      }
-    );
-
-    test.weakTopics = weakTopics;
-    test.strongTopics = strongTopics;
-
-    test.score = score;
-
-    test.accuracy =
-      (score / test.questions.length) * 100;
-
-    test.results = results;
-
-
-    test.isSubmitted = true;
-    test.submittedAt = new Date();
-    await test.save();
+    const attempt = await PracticeAttempt.create({
+      userId: req.user.userId,
+      testId: test._id,
+      answers: results,
+      score,
+      accuracy,
+      weakTopics,
+      strongTopics
+    });
 
     res.json({
       message: "Test submitted",
-      testId: test._id
+      attemptId: attempt._id
     });
 
-  } catch (err) {
-
+  } catch {
     res.status(500).json({
       message: "Submission failed"
     });
   }
 };
 
+
+
+
 export const getTestResult = async (req, res) => {
 
   try {
 
-    const { testId } = req.params;
+    const { attemptId } = req.params;
 
-    const test = await PracticeTest
-      .findById(testId)
-      .populate("questions");
+    const attempt = await PracticeAttempt
+      .findById(attemptId)
+      .populate({
+        path: "testId",
+        populate: {
+          path: "questions"
+        }
+      });
 
-    if (!test || !test.isSubmitted) {
-
+    if (!attempt) {
       return res.status(404).json({
         message: "Result not found"
       });
     }
-    const review = test.questions.map(q => {
 
-      const result = test.results.find(
+    const questions = attempt.testId.questions;
+
+    const review = questions.map(q => {
+
+      const correctOption = q.options.find(o => o.isCorrect)?.text;
+
+      const result = attempt.answers.find(
         r => r.questionId.toString() === q._id.toString()
       );
 
       return {
         question: q.questionText,
-        options: q.options,
-        correctAnswer: q.correctAnswer,
+        options: q.options.map(o => o.text),  // ⭐ return clean array
+        correctAnswer: correctOption,
         selectedAnswer: result?.selectedAnswer,
-        isCorrect: result?.isCorrect,
+        isCorrect: result?.isCorrect
       };
     });
 
     res.json({
-      score: test.score,
-      total: test.questions.length,
-      accuracy: test.accuracy,
-      results: test.results,
-      submittedAt: test.submittedAt,
-      review,
-      weakTopics: test.weakTopics,
-      strongTopics: test.strongTopics,
+      score: attempt.score,
+      accuracy: attempt.accuracy,
+      weakTopics: attempt.weakTopics,
+      strongTopics: attempt.strongTopics,
+      review
     });
 
   } catch {
-
     res.status(500).json({
       message: "Failed to fetch result"
     });
   }
 };
 
-export const getAttemptHistory = async (req, res) => {
 
+
+export const getAttemptHistory = async (req, res) => {
   try {
 
     const userId = req.user.userId;
 
-    const attempts = await PracticeTest
-      .find({
-        userId,
-        isSubmitted: true
+    const attempts = await PracticeAttempt
+      .find({ userId })
+
+      // populate test data
+      .populate({
+        path: "testId",
+        select: "difficulty totalQuestions testType"
       })
-      .sort({ submittedAt: -1 }) // newest first
+
+      .sort({ createdAt: -1 }) // newest first
+
       .select(`
         score
         accuracy
-        difficulty
-        totalQuestions
         weakTopics
         createdAt
-        submittedAt
+        testId
       `);
 
     res.json(attempts);
 
-  } catch {
+  } catch (err) {
 
     res.status(500).json({
       message: "Failed to fetch attempts"
     });
   }
 };
+
 
 
 

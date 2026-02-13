@@ -19,7 +19,7 @@ router.post("/submit/:testId", auth, submitPracticeTest);
 
 //Result route
 router.get(
-    "/result/:testId",
+    "/result/:attemptId",
     auth,
     getTestResult
 );

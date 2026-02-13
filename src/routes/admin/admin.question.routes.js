@@ -4,15 +4,26 @@ import { adminOnly } from "../../middleware/admin.middleware.js";
 
 import {
   createQuestion,
-  getAllQuestions,
-  bulkCreateQuestions
+  bulkCreateQuestions,
+  getAdminQuestions,
+  getQuestionById,
+  updateQuestion,
+  deleteQuestion
 } from "../../controller/admin/admin.question.controller.js";
 
 const router = express.Router();
 
 router.post("/", auth, adminOnly, createQuestion);
-router.get("/", auth, adminOnly, getAllQuestions);
+
 router.post("/bulk", auth, adminOnly, bulkCreateQuestions);
+
+router.get("/", auth, adminOnly, getAdminQuestions);
+
+router.get("/:id", auth, adminOnly, getQuestionById);
+
+router.put("/:id", auth, adminOnly, updateQuestion);
+
+router.delete("/:id", auth, adminOnly, deleteQuestion);
 
 
 export default router;

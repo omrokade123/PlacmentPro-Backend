@@ -6,21 +6,24 @@ const answerSchema = new mongoose.Schema({
     ref: "Question"
   },
 
-  selectedAnswer: String,
-
-  isCorrect: Boolean
+  isCorrect:{
+    type: Boolean,
+    dafault: false
+  }
 });
 
 const practiceAttemptSchema = new mongoose.Schema(
 {
   userId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User"
+    ref: "User",
+    index:true
   },
 
   testId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "PracticeTest"
+    ref: "PracticeTest",
+    index:true
   },
 
   answers: [answerSchema],
@@ -37,6 +40,6 @@ const practiceAttemptSchema = new mongoose.Schema(
 { timestamps: true }
 );
 
-practiceAttemptSchema.index({ userId: 1,createdAt: -1 });
+practiceAttemptSchema.index({ userId: 1,testId: 1 });
 
 export default mongoose.model("PracticeAttempt", practiceAttemptSchema);

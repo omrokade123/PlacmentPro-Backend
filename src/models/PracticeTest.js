@@ -33,24 +33,22 @@ const practiceTestSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["generated", "completed"],
+      enum: ["generated", "submitted"],
       default: "generated"
     },
+
     startTime: {
       type: Date,
       default: Date.now
     },
 
     duration: {
-      type: Number
+      type: Number // seconds
     },
-    isSubmitted: {
-      type: Boolean,
-      default: false
-    },
-    submittedAt: Date,
-    score: Number,
 
+    submittedAt: Date,
+
+    score: Number,
     accuracy: Number,
 
     results: [
@@ -60,13 +58,14 @@ const practiceTestSchema = new mongoose.Schema(
         isCorrect: Boolean
       }
     ],
+
     weakTopics: [String],
     strongTopics: [String],
-
-
 
   },
   { timestamps: true }
 );
+
+practiceTestSchema.index({ userId: 1, createdAt: -1 });
 
 export default mongoose.model("PracticeTest", practiceTestSchema);
