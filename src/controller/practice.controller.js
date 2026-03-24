@@ -174,6 +174,7 @@ export const submitPracticeTest = async (req, res) => {
 
     const accuracy = (score / test.questions.length) * 100;
 
+
     const attempt = await PracticeAttempt.create({
       userId: req.user.userId,
       testId: test._id,
@@ -183,6 +184,17 @@ export const submitPracticeTest = async (req, res) => {
       weakTopics,
       strongTopics
     });
+
+    await PracticeTest.findByIdAndUpdate(testId, {
+      status: "submitted",
+      submittedAt: new Date(),
+      score,
+      accuracy,
+      results,
+      weakTopics,
+      strongTopics
+    });
+
 
     res.json({
       message: "Test submitted",

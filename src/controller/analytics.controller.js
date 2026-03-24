@@ -1,14 +1,17 @@
+import PracticeAttempt from "../models/PracticeAttempt.js";
 import PracticeTest from "../models/PracticeTest.js";
+import mongoose from "mongoose";
 
 export const getUserAnalytics = async (req, res) => {
 
   try {
 
-    const userId = req.user.userId;
+    const userId = new mongoose.Types.ObjectId(req.user.userId);
+    //console.log(userId);
 
     const tests = await PracticeTest.find({
       userId,
-      isSubmitted: true,
+      status: "submitted",
       score: { $exists: true }
     });
 
@@ -81,10 +84,55 @@ export const getUserAnalytics = async (req, res) => {
     });
 
 
-  } catch {
+  } catch (err) {
 
     res.status(500).json({
       message: "Failed to fetch analytics"
     });
   }
 };
+
+
+// export const getUserAnalytics = async (req, res) => {
+
+//   try {
+
+//     const userId = new mongoose.Types.ObjectId(req.user.userId);
+
+//     const attempts = await PracticeAttempt.aggregate([
+
+//       { $match: { userId } },
+
+//       {
+//         $group: {
+//           _id: null,
+//           totalTests: { $sum: 1 },
+//           avgScore: { $avg: "$score" },
+//           avgAccuracy: { $avg: "$accuracy" },
+//           weakTopics: { $push: "$weakTopics" },
+//           strongTopics: { $push: "$strongTopics" }
+//         }
+//       }
+
+//     ]);
+//     const trendData = await PracticeAttempt
+//       .find({ userId })
+//       .sort({ createdAt: 1 })
+//       .select("score accuracy createdAt");
+//     res.json(attempts[0] || {
+//       totalTests: 0,
+//       avgScore: 0,
+//       avgAccuracy: 0,
+//       weakTopics: [],
+//       strongTopics: [],
+//       trendData
+//     });
+
+//   } catch (err) {
+
+//     res.status(500).json({
+//       message: "Analytics failed"
+//     });
+
+//   }
+// };
