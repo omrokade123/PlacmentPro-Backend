@@ -5,80 +5,137 @@ import mongoose from "mongoose";
 import User from "../models/User.js";
 
 
+const TOPIC_MAP = {
+  aptitude: "aptitude",
+  reasoning: "reasoning",
+  verbal: "verbal",
+  coding: "coding",
+};
+
+const ALLOWED_TOPICS = Object.keys(TOPIC_MAP);
+
+const DURATION_PER_QUESTION = {
+  aptitude: 90,
+  reasoning: 90,
+  verbal: 60,
+  coding: 180,   // coding questions deserve more time
+  default: 90,
+};
+
 export const generatePracticeTest = async (req, res) => {
-
   try {
-
     const {
       difficulty,
       companyId,
-      testType,
-      totalQuestions = 10
+      testTopic,
+      totalQuestions,
     } = req.body;
 
-    /* Build filter */
-    const filter = {
-      difficulty,
-      questionType: "mcq"
-    };
-    const durationPerQuestion = 90; // seconds
-
-    const duration = totalQuestions * durationPerQuestion;
-
-
-    if (companyId && mongoose.Types.ObjectId.isValid(companyId)) {
-      filter.companyTags = companyId;
+    // ── 1. Validate required fields 
+    if (!difficulty) {
+      return res.status(400).json({ message: "difficulty is required." });
     }
 
-    /* RANDOM SAMPLING — MongoDB Magic */
-    const questions = await Question.aggregate([
-      { $match: filter },
-      { $sample: { size: totalQuestions } }
-    ]);
+    if (!testTopic) {
+      return res.status(400).json({ message: "testTopic is required." });
+    }
 
-    if (questions.length === 0) {
-      return res.status(404).json({
-        message: "Not enough questions found"
+    // ── 2. Validate testTopic value ─────────────────────────────────────────
+    const normalizedTopic = testTopic.toLowerCase().trim();
+
+    if (!ALLOWED_TOPICS.includes(normalizedTopic)) {
+      return res.status(400).json({
+        message: `Invalid testTopic. Allowed values: ${ALLOWED_TOPICS.join(", ")}.`,
       });
     }
 
-    /* Create test */
+    // ── 3. Validate totalQuestions ──────────────────────────────────────────
+    const numQuestions = parseInt(totalQuestions, 10);
+    if (isNaN(numQuestions) || numQuestions < 1 || numQuestions > 50) {
+      return res.status(400).json({
+        message: "totalQuestions must be a number between 1 and 50.",
+      });
+    }
+
+    const normalizedDifficulty = difficulty.toLowerCase().trim();
+    // ── 4. Build MongoDB filter ─────────────────────────────────────────────
+    const filter = {
+      questionType: "mcq",
+      difficulty: normalizedDifficulty,
+      topic: normalizedTopic,   // ← THIS was missing before
+    };
+
+    // Optionally scope to a specific company's question bank
+    if (companyId && mongoose.Types.ObjectId.isValid(companyId)) {
+      filter.companyTags = new mongoose.Types.ObjectId(companyId);
+    }
+
+    // ── 5. Calculate test duration ──────────────────────────────────────────
+    const secsPerQ =
+      DURATION_PER_QUESTION[normalizedTopic] ?? DURATION_PER_QUESTION.default;
+    const duration = numQuestions * secsPerQ; // total seconds
+
+    // ── 6. Fetch random questions from DB ───────────────────────────────────
+    const questions = await Question.aggregate([
+      { $match: filter },
+      { $sample: { size: numQuestions } },
+    ]);
+
+    
+    if (questions.length === 0) {
+      return res.status(404).json({
+        message: `No ${normalizedTopic} questions found for difficulty "${difficulty}".`,
+      });
+    }
+
+    // Warn if DB didn't have enough (but still proceed with what we got)
+    const actualCount = questions.length;
+
+    // ── 7. Persist the PracticeTest document ────────────────────────────────
     const test = await PracticeTest.create({
       userId: req.user.userId,
-      questions: questions.map(q => q._id),
+      questions: questions.map((q) => q._id),
       difficulty,
-      companyId,
-      testType,
-      totalQuestions,
+      companyId: companyId || null,
+      testType: normalizedTopic, 
+      totalQuestions: actualCount,
+      status: "generated",
       startTime: new Date(),
-      duration
+      duration,
     });
 
-
-    /* Remove answers before sending */
-    const safeQuestions = questions.map(q => ({
+    // ── 8. Strip correct answers before sending to client ───────────────────
+    const safeQuestions = questions.map((q) => ({
       _id: q._id,
       questionText: q.questionText,
-      options: q.options,
+      options: q.options.map(opt => ({
+        text: opt.text
+      })),          // array of { text, _id } — no `isCorrect`
       topic: q.topic,
-      difficulty: q.difficulty
+      subTopic: q.subTopic,
+      difficulty: q.difficulty,
     }));
 
-    res.status(201).json({
-      message: "Practice test generated",
+    // ── 9. Respond ───────────────────────────────────────────────────────────
+    return res.status(201).json({
+      message: "Practice test generated successfully.",
       testId: test._id,
+      testTopic: normalizedTopic,
+      difficulty,
+      totalQuestions: actualCount,
+      duration,                         // seconds — frontend converts to mm:ss
       questions: safeQuestions,
-      duration: test.duration
     });
 
   } catch (error) {
-
-    res.status(500).json({
-      message: "Failed to generate test",
-      error: error.message
+    console.error("[generatePracticeTest]", error);
+    return res.status(500).json({
+      message: "Failed to generate practice test.",
+      error: error.message,
     });
   }
 };
+
 
 export const getPracticeTest = async (req, res) => {
 
@@ -88,7 +145,7 @@ export const getPracticeTest = async (req, res) => {
   })
     .populate({
       path: "questions",
-      select: "questionText options topic difficulty"
+      select: "questionText options topic subTopic difficulty"
     });
 
   if (!test) {
@@ -135,31 +192,36 @@ export const submitPracticeTest = async (req, res) => {
     let score = 0;
     const topicStats = {};
 
-    const results = test.questions.map(q => {
+    const results = test.questions.map((q, idx) => {
 
-      const userAnswer = answers[q._id.toString()];
+      const userAnswer = answers[q._id.toString()] ?? null;
 
       // ⭐ find correct option
       const correctOption = q.options.find(o => o.isCorrect)?.text;
 
-      const isCorrect = userAnswer === correctOption;
+      const isCorrect = userAnswer && userAnswer.trim() === correctOption?.trim();
 
       if (isCorrect) score++;
 
+      // ⭐ Use subTopic instead of topic
+      const evaluationTopic = q.subTopic || q.topic;
+
       // topic tracking
-      if (!topicStats[q.topic]) {
-        topicStats[q.topic] = { total: 0, correct: 0 };
+      if (!topicStats[evaluationTopic]) {
+        topicStats[evaluationTopic] = { total: 0, correct: 0 };
       }
 
-      topicStats[q.topic].total++;
+      topicStats[evaluationTopic].total++;
 
-      if (isCorrect) topicStats[q.topic].correct++;
+      if (isCorrect) topicStats[evaluationTopic].correct++;
 
-      return {
+      const result = {
         questionId: q._id,
         selectedAnswer: userAnswer,
         isCorrect
       };
+      
+      return result;
     });
 
     const weakTopics = [];
@@ -173,7 +235,6 @@ export const submitPracticeTest = async (req, res) => {
     });
 
     const accuracy = (score / test.questions.length) * 100;
-
 
     const attempt = await PracticeAttempt.create({
       userId: req.user.userId,
@@ -221,8 +282,10 @@ export const getTestResult = async (req, res) => {
       .findById(attemptId)
       .populate({
         path: "testId",
+        select: "questions",
         populate: {
-          path: "questions"
+          path: "questions",
+          select: "questionText options topic subTopic difficulty"
         }
       });
 
@@ -232,28 +295,32 @@ export const getTestResult = async (req, res) => {
       });
     }
 
-    const questions = attempt.testId.questions;
+    const questions = attempt.testId?.questions || [];
 
-    const review = questions.map(q => {
+    const answerMap = new Map();
+    attempt.answers.forEach((a, idx) => {
+      answerMap.set(String(a.questionId), a);
+    });
+
+    const review = questions.map((q, idx) => {
 
       const correctOption = q.options.find(o => o.isCorrect)?.text;
 
-      const result = attempt.answers.find(
-        r => r.questionId.toString() === q._id.toString()
-      );
+      const result = answerMap.get(String(q._id));
 
       return {
         question: q.questionText,
         options: q.options.map(o => o.text),  // ⭐ return clean array
         correctAnswer: correctOption,
-        selectedAnswer: result?.selectedAnswer,
-        isCorrect: result?.isCorrect
+        selectedAnswer: result?.selectedAnswer || null,
+        isCorrect: result?.isCorrect || false,
       };
     });
 
     res.json({
       score: attempt.score,
       accuracy: attempt.accuracy,
+      totalQuestions: questions.length,
       weakTopics: attempt.weakTopics,
       strongTopics: attempt.strongTopics,
       review
@@ -288,6 +355,7 @@ export const getAttemptHistory = async (req, res) => {
         score
         accuracy
         weakTopics
+        strongTopics
         createdAt
         testId
       `);

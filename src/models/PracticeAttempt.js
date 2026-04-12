@@ -6,9 +6,14 @@ const answerSchema = new mongoose.Schema({
     ref: "Question"
   },
 
+  selectedAnswer: {
+    type: String,
+    default: null
+  },
+
   isCorrect:{
     type: Boolean,
-    dafault: false
+    default: false
   }
 });
 

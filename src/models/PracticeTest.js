@@ -25,9 +25,18 @@ const practiceTestSchema = new mongoose.Schema(
 
     testType: {
       type: String,
-      enum: ["aptitude", "technical", "verbal"],
-      required: true
+      enum: ["aptitude", "reasoning", "verbal", "coding"],
+      required: true,
+      index: true
     },
+
+    // ⭐ optional filter used while generating test
+    subTopics: [
+      {
+        type: String,
+        index: true
+      }
+    ],
 
     totalQuestions: Number,
 
@@ -61,11 +70,20 @@ const practiceTestSchema = new mongoose.Schema(
 
     weakTopics: [String],
     strongTopics: [String],
+    topicStats: {
+      type: Map,
+      of: {
+        total: Number,
+        correct: Number
+      }
+    }
+
 
   },
   { timestamps: true }
 );
 
 practiceTestSchema.index({ userId: 1, createdAt: -1 });
+practiceTestSchema.index({testType:1 , difficulty:1});
 
 export default mongoose.model("PracticeTest", practiceTestSchema);

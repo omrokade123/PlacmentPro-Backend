@@ -16,10 +16,14 @@ const questionSchema = new mongoose.Schema({
 
   topic: {
     type: String,
+    enum: ["aptitude", "reasoning", "verbal", "coding"],
     required: true,
     index: true
   },
-
+  subTopic: {
+    type:String,
+    index:true,
+  },
   difficulty: {
     type: String,
     enum: ["easy", "medium", "hard"],

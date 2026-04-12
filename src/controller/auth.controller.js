@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import tokenBlacklistModel from "../models/MockInterview/blacklist.model.js";
 
 export const register = async (req, res) => {
   try {
@@ -20,8 +21,16 @@ export const register = async (req, res) => {
 
     const user = await User.create({ name, email, passwordHash });
 
+    const token = jwt.sign(
+      { id: user._id, name: user.name, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    )
+
+
     res.status(201).json({
       message: "User registered successfully",
+      token,
       user: {
         id: user._id,
         name: user.name,
@@ -65,7 +74,7 @@ export const login = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { userId: user._id, role: user.role },
+      { userId: user._id, name: user.name, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -88,3 +97,36 @@ export const login = async (req, res) => {
   }
 
 };
+
+export const logout = async (req, res) => {
+  try {
+    let token = req.token;
+    if (!token && req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+      token = req.headers.authorization.split(" ")[1];
+    }
+    if (token) {
+      await tokenBlacklistModel.create({ token });
+    } else {
+      return res.status(400).json({
+        message: "Token is required for logout"
+      });
+    }
+
+    res.status(200).json({
+      message: "User logged out successfully"
+    });
+  } catch (err) { 
+    console.log(err);
+    return res.status(401).json({
+      message: "Internal Server Error"
+    })
+  }
+}
+
+
+export const getMeController = async (req, res) => {
+  res.status(200).json({
+    message: "User details fetched successfully",
+    user: req.user
+  });
+}
