@@ -12,6 +12,7 @@ import adminRoutes from "./routes/admin/admin.route.js";
 import practiceRoutes from "./routes/practice.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
 import interviewRouter from "./routes/interview.routes.js";
+import profileRoutes from "./routes/profile.routes.js";
 
 
 
@@ -32,6 +33,7 @@ app.use(cookieParser());
 
 /* Routes */
 app.use("/api/auth",authRoutes);
+app.use("/api/profile", profileRoutes);
 app.use("/api/experiences",experienceRoutes);
 app.use("/api/companies",companyRoutes);
 app.use("/api/practice",practiceRoutes);

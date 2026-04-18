@@ -22,11 +22,10 @@ export const register = async (req, res) => {
     const user = await User.create({ name, email, passwordHash });
 
     const token = jwt.sign(
-      { id: user._id, name: user.name, role: user.role },
+      { userId: user._id, name: user.name, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     )
-
 
     res.status(201).json({
       message: "User registered successfully",
@@ -35,7 +34,19 @@ export const register = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
+        location: user.location,
+        bio: user.bio,
+        title: user.title,
+        skills: user.skills,
+        avatar: user.avatar,
+        role: user.role,
+        profile: user.profile,
+        preferences: user.preferences,
+        stats: user.stats,
+        achievements: user.achievements
       }
     });
   } catch (error) {
@@ -85,7 +96,20 @@ export const login = async (req, res) => {
       user: {
         id: user._id,
         name: user.name,
-        role: user.role
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
+        location: user.location,
+        bio: user.bio,
+        title: user.title,
+        skills: user.skills,
+        avatar: user.avatar,
+        role: user.role,
+        profile: user.profile,
+        preferences: user.preferences,
+        stats: user.stats,
+        achievements: user.achievements
       }
     });
   } catch (error) {
