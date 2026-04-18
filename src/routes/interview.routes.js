@@ -3,6 +3,8 @@ import authMiddleware from "../middleware/auth.middleware.js";
 import upload from "../middleware/file.middleware.js";
 import interviewController from "../controller/interview.controller.js";
 const interviewRouter = express.Router();
+import { audioupload } from "../middleware/upload.middleware.js";
+
 
 /**
  * @route POST /api/interview/
@@ -53,6 +55,13 @@ interviewRouter.post("/answer/:interviewId",authMiddleware,interviewController.s
  * @access private 
  */
 interviewRouter.get("/session/:reportId",authMiddleware,interviewController.getInterviewSession);
+
+/**
+ * @route post /api/interview/speech-to-text
+ * @description to transcript the audio
+ * @access private
+ */
+interviewRouter.post("/speech-to-text",authMiddleware,audioupload.single("audio"),interviewController.speechToText);
 
 /**
  * @route GET /api/interview/feedback/:interviewId

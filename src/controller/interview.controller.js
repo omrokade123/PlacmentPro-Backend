@@ -4,6 +4,7 @@ const pdfParse = require("pdf-parse");
 import interviewAi from "../services/ai.services.js";
 import interviewReportModel from "../models/MockInterview/interviewReport.model.js";
 import InterviewSession from "../models/InterviewSession.js";
+import { transcribeAudio } from "../services/deepgram.service.js";
 
 /**
  * @description controller to genrate interview report based on user self description, resume and job description.
@@ -269,6 +270,37 @@ async function getInterviewSession(req, res) {
 }
 
 
+async function speechToText(req, res){
+
+  try {
+
+    if (!req.file) {
+      return res.status(400).json({
+        message: "Audio file not received"
+      });
+    }
+
+    const audioBuffer = req.file.buffer;
+
+
+    const transcript = await transcribeAudio(audioBuffer);
+
+    res.json({
+      text: transcript
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+    res.status(500).json({
+      message: "Speech transcription failed"
+    });
+
+  }
+
+};
+
 /**
  * @description Controller to get interview feedback for a completed interview based on interviewId.
  */
@@ -316,4 +348,4 @@ async function getInterviewSession(req, res) {
 // }
 
 
-export default { genrateInterviewReportController, getInterviewReportById, getAllInterviewReports, scheduleInterview, startInterview, submitAnswer, getInterviewSession };
+export default { genrateInterviewReportController, getInterviewReportById, getAllInterviewReports, scheduleInterview, startInterview, submitAnswer, getInterviewSession , speechToText };
