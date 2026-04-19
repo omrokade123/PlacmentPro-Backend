@@ -203,29 +203,56 @@ async function getInterviewFeedback(answers) {
         .join("\n\n");
 
     const prompt = `
-            You are an experienced technical interviewer.
+                You are an experienced technical interviewer.
 
-            Evaluate the following mock interview answers.
+                Evaluate the following mock interview answers.
 
-            ${qaText}
+                ${qaText}
 
-            Return ONLY JSON.
+                While evaluating behavioral answers, use the STAR method:
 
-            {
-            "overallScore": number,
-            "technicalScore": number,
-            "communicationScore": number,
-            "strengths": [string],
-            "weaknesses": [string],
-            "suggestions": [string]
-            }
+                STAR Method:
+                - Situation: Did the candidate describe the context?
+                - Task: Did they explain the responsibility or challenge?
+                - Action: Did they clearly explain what actions they took?
+                - Result: Did they explain the outcome or impact?
 
-            Rules:
-            - Scores between 0 and 10
-            - Provide exactly 3 strengths
-            - Provide exactly 3 weaknesses
-            - Provide exactly 3 suggestions
-    `;
+                Return ONLY JSON.
+
+                {
+                "overallScore": number,
+                "technicalScore": number,
+                "communicationScore": number,
+                "strengths": [string],
+                "weaknesses": [string],
+                "suggestions": [string]
+                }
+
+                Evaluation Guidelines:
+
+                Technical Score:
+                - correctness of technical concepts
+                - depth of knowledge
+                - relevance of examples
+
+                Communication Score:
+                - clarity of explanation
+                - structured responses
+                - confidence in answers
+
+                Behavioral Evaluation:
+                - Check if answers follow the STAR method
+                - If STAR components are missing, include that in weaknesses
+                - Provide suggestions to improve STAR structure
+
+                Rules:
+                - Scores between 0 and 10
+                - Provide exactly 3 strengths
+                - Provide exactly 3 weaknesses
+                - Provide exactly 3 suggestions
+                - Suggestions must be actionable
+                `;
+                
     const response = await client.chat.completions.create({
         model: "meta-llama/llama-4-scout-17b-16e-instruct",
         messages: [{
