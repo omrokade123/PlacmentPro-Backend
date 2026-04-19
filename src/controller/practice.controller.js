@@ -243,7 +243,7 @@ export const submitPracticeTest = async (req, res) => {
       score,
       accuracy,
       weakTopics,
-      strongTopics
+      strongTopics,
     });
 
     await PracticeTest.findByIdAndUpdate(testId, {
@@ -285,7 +285,7 @@ export const getTestResult = async (req, res) => {
         select: "questions",
         populate: {
           path: "questions",
-          select: "questionText options topic subTopic difficulty"
+          select: "questionText options explanation topic subTopic difficulty"
         }
       });
 
@@ -314,6 +314,7 @@ export const getTestResult = async (req, res) => {
         correctAnswer: correctOption,
         selectedAnswer: result?.selectedAnswer || null,
         isCorrect: result?.isCorrect || false,
+        description: q.explanation || ""
       };
     });
 
