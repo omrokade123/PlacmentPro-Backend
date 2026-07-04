@@ -13,6 +13,7 @@ import practiceRoutes from "./routes/practice.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
 import interviewRouter from "./routes/interview.routes.js";
 import profileRoutes from "./routes/profile.routes.js";
+// import roadmapRoute from "./routes/roadmap.routes.js";
 
 
 
@@ -40,6 +41,8 @@ app.use("/api/practice",practiceRoutes);
 app.use("/api/analytics", analyticsRoutes);
 
 app.use("/api/interview",interviewRouter);
+
+// app.use("/api/roadmap",roadmapRoute);
 
 //admin
 app.use("/api/admin",adminRoutes);

@@ -203,56 +203,114 @@ async function getInterviewFeedback(answers) {
         .join("\n\n");
 
     const prompt = `
-                You are an experienced technical interviewer.
+You are a Senior Software Engineer and Technical Interviewer with experience interviewing candidates at product companies.
 
-                Evaluate the following mock interview answers.
+Evaluate the following mock interview.
 
-                ${qaText}
+${qaText}
 
-                While evaluating behavioral answers, use the STAR method:
+For behavioral questions, evaluate using the STAR method.
 
-                STAR Method:
-                - Situation: Did the candidate describe the context?
-                - Task: Did they explain the responsibility or challenge?
-                - Action: Did they clearly explain what actions they took?
-                - Result: Did they explain the outcome or impact?
+STAR Method:
+- Situation
+- Task
+- Action
+- Result
 
-                Return ONLY JSON.
+Return ONLY valid JSON.
 
-                {
-                "overallScore": number,
-                "technicalScore": number,
-                "communicationScore": number,
-                "strengths": [string],
-                "weaknesses": [string],
-                "suggestions": [string]
-                }
+{
+  "summary": {
+    "overallScore": number,
+    "technicalScore": number,
+    "communicationScore": number,
+    "strengths": [string],
+    "weaknesses": [string],
+    "suggestions": [string]
+  },
 
-                Evaluation Guidelines:
+  "questions": [
+    {
+      "question": string,
+      "userAnswer": string,
 
-                Technical Score:
-                - correctness of technical concepts
-                - depth of knowledge
-                - relevance of examples
+      "analysis": {
+        "score": number,
 
-                Communication Score:
-                - clarity of explanation
-                - structured responses
-                - confidence in answers
+        "modelAnswer": string,
 
-                Behavioral Evaluation:
-                - Check if answers follow the STAR method
-                - If STAR components are missing, include that in weaknesses
-                - Provide suggestions to improve STAR structure
+        "mistakes": [string],
 
-                Rules:
-                - Scores between 0 and 10
-                - Provide exactly 3 strengths
-                - Provide exactly 3 weaknesses
-                - Provide exactly 3 suggestions
-                - Suggestions must be actionable
-                `;
-                
+        "missingConcepts": [string],
+
+        "interviewerTips": [string],
+
+        "keywordsMissed": [string],
+
+        "improvementSuggestions": [string]
+      }
+    }
+  ]
+}
+
+Evaluation Rules
+
+Overall Summary
+
+- overallScore between 0 and 10
+- technicalScore between 0 and 10
+- communicationScore between 0 and 10
+
+Generate exactly:
+- 3 strengths
+- 3 weaknesses
+- 3 suggestions
+
+Question Evaluation
+
+For EVERY question:
+
+1. Give score (0-10)
+
+2. Provide an ideal interview answer.
+
+3. Identify mistakes in candidate answer.
+
+4. Mention important concepts the candidate missed.
+
+5. Suggest interview improvements.
+
+6. Mention important interview keywords missing from the answer.
+
+Behavioral Questions
+
+Evaluate according to STAR.
+
+If STAR components are missing,
+mention them in:
+- mistakes
+- missingConcepts
+- interviewerTips
+
+Model Answer Rules
+
+- Professional
+- Interview-ready
+- Concise
+- 100-200 words
+- Technically accurate
+
+Important
+
+Return ONLY JSON.
+
+Do not include markdown.
+
+Do not include explanation.
+
+Do not wrap JSON inside code blocks.
+`;
+
     const response = await client.chat.completions.create({
         model: "meta-llama/llama-4-scout-17b-16e-instruct",
         messages: [{

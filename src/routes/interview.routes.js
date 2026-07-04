@@ -51,7 +51,7 @@ interviewRouter.post("/answer/:interviewId",authMiddleware,interviewController.s
 
 /**
  * @route GET /api/interview/session/:reportId
- * @description get session seubmitted of interview
+ * @description get session submitted of interview
  * @access private 
  */
 interviewRouter.get("/session/:reportId",authMiddleware,interviewController.getInterviewSession);

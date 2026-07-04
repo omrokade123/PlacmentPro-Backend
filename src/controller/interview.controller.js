@@ -10,25 +10,33 @@ import { transcribeAudio } from "../services/deepgram.service.js";
  * @description controller to genrate interview report based on user self description, resume and job description.
  */
 async function genrateInterviewReportController(req, res) {
-    const resumeContent = await (new pdfParse.PDFParse(Uint8Array.from(req.file.buffer))).getText();
-    const { selfDescription, jobDescription } = req.body;
+    try {
+        const resumeContent = await (new pdfParse.PDFParse(Uint8Array.from(req.file.buffer))).getText();
+        const { selfDescription, jobDescription } = req.body;
 
-    const interviewReportByAi = await interviewAi.genrateInterviewReport({
-        resume: resumeContent.text,
-        selfDescription,
-        jobDescription
-    });
-    const interviewReport = await interviewReportModel.create({
-        userId: req.user.userId,
-        resume: resumeContent.text,
-        selfDescription,
-        jobDescription,
-        ...interviewReportByAi
-    });
-    res.status(201).json({
-        message: "Interview report genrated successfully",
-        interviewReport
-    })
+        const interviewReportByAi = await interviewAi.genrateInterviewReport({
+            resume: resumeContent.text,
+            selfDescription,
+            jobDescription
+        });
+        const interviewReport = await interviewReportModel.create({
+            userId: req.user.userId,
+            resume: resumeContent.text,
+            selfDescription,
+            jobDescription,
+            ...interviewReportByAi
+        });
+        res.status(201).json({
+            message: "Interview report genrated successfully",
+            interviewReport
+        })
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            message: "Error while genrating report"
+        });
+    }
+
 }
 
 /**
@@ -203,29 +211,35 @@ async function submitAnswer(req, res) {
         // last question reached
         if (!nextQuestion) {
 
-            interview.status = "completed";
-
-            await interview.save();
-
-            let feedback = null;
+            let feedback = {
+                summary: {
+                    overallScore: 0,
+                    technicalScore: 0,
+                    communicationScore: 0,
+                    strengths: [],
+                    weaknesses: [],
+                    suggestions: []
+                },
+                questions: []
+            };
 
             try {
                 feedback = await interviewAi.getInterviewFeedback(interview.answers);
             } catch (aiError) {
-                console.error("AI feedback error:", aiError);
+                console.error("AI feedback generation failed:", aiError);
             }
 
+            interview.status = "completed";
             interview.feedback = feedback;
 
             await interview.save();
 
             return res.status(200).json({
-                message: "Interview completed",
+                message: "Interview completed successfully",
                 interviewCompleted: true,
                 feedback
             });
         }
-
         await interview.save();
 
         return res.status(200).json({
@@ -251,101 +265,54 @@ async function submitAnswer(req, res) {
  * @description get Interview Session from interviewId
  */
 async function getInterviewSession(req, res) {
-  try {
+    try {
 
-    const { reportId } = req.params;
-    
+        const { reportId } = req.params;
 
-    const interview = await InterviewSession.findOne({
-      reportId,
-      userId: req.user.userId
-    });
 
-    
-    res.json({ interview });
+        const interview = await InterviewSession.findOne({
+            reportId,
+            userId: req.user.userId
+        });
 
-  } catch (error) {
-    res.status(500).json({ message: "Server error" });
-  }
+
+        res.json({ interview });
+
+    } catch (error) {
+        res.status(500).json({ message: "Server error" });
+    }
 }
 
 
-async function speechToText(req, res){
+async function speechToText(req, res) {
 
-  try {
+    try {
 
-    if (!req.file) {
-      return res.status(400).json({
-        message: "Audio file not received"
-      });
+        if (!req.file) {
+            return res.status(400).json({
+                message: "Audio file not received"
+            });
+        }
+
+        const audioBuffer = req.file.buffer;
+
+
+        const transcript = await transcribeAudio(audioBuffer);
+
+        res.json({
+            text: transcript
+        });
+
+    } catch (error) {
+
+        console.error(error);
+
+        res.status(500).json({
+            message: "Speech transcription failed"
+        });
+
     }
-
-    const audioBuffer = req.file.buffer;
-
-
-    const transcript = await transcribeAudio(audioBuffer);
-
-    res.json({
-      text: transcript
-    });
-
-  } catch (error) {
-
-    console.error(error);
-
-    res.status(500).json({
-      message: "Speech transcription failed"
-    });
-
-  }
 
 };
 
-/**
- * @description Controller to get interview feedback for a completed interview based on interviewId.
- */
-// async function getInterviewFeedback(req, res) {
-//     try {
-//         const { interviewId } = req.params;
-
-//         const interview = await InterviewSession.findById(interviewId);
-
-//         if (!interview) {
-//             return res.status(404).json({
-//                 message: "Interview not found"
-//             });
-//         }
-
-//         if (interview.status !== "completed") {
-//             return res.status(400).json({
-//                 message: "Interview not completed yet"
-//             });
-//         }
-
-//         if (interview.feedback) {
-//             return res.json({
-//                 feedback: interview.feedback
-//             });
-//         }
-
-//         // generate AI feedback
-//         const feedback = await generateInterviewFeedbackAI(interview.answers);
-
-//         interview.feedback = feedback;
-
-//         await interview.save();
-
-//         res.status(200).json({
-//             message: "Interview feedback generated successfully",
-//             feedback
-//         })
-//     } catch (err) {
-//         console.error(err);
-//         res.status(500).json({
-//             message: "Server error while fetching interview feedback"
-//         })
-//     }
-// }
-
-
-export default { genrateInterviewReportController, getInterviewReportById, getAllInterviewReports, scheduleInterview, startInterview, submitAnswer, getInterviewSession , speechToText };
+export default { genrateInterviewReportController, getInterviewReportById, getAllInterviewReports, scheduleInterview, startInterview, submitAnswer, getInterviewSession, speechToText };

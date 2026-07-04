@@ -47,12 +47,40 @@ const interviewSessionSchema = new mongoose.Schema({
         default: []
     },
     feedback: {
-        overallScore: Number,
-        technicalScore: Number,
-        communicationScore: Number,
-        strengths: [String],
-        weaknesses: [String],
-        suggestions: [String]
+
+        summary: {
+            overallScore: Number,
+            technicalScore: Number,
+            communicationScore: Number,
+
+            strengths: [String],
+            weaknesses: [String],
+            suggestions: [String]
+        },
+
+        questions: [
+            {
+                question: String,
+
+                userAnswer: String,
+
+                analysis: {
+                    score: Number,
+
+                    modelAnswer: String,
+
+                    mistakes: [String],
+
+                    missingConcepts: [String],
+
+                    interviewerTips: [String],
+
+                    keywordsMissed: [String],
+
+                    improvementSuggestions: [String]
+                }
+            }
+        ]
     }
 }, {
     timestamps: true
