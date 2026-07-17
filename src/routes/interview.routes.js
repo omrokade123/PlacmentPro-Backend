@@ -4,6 +4,7 @@ import upload from "../middleware/file.middleware.js";
 import interviewController from "../controller/interview.controller.js";
 const interviewRouter = express.Router();
 import { audioupload } from "../middleware/upload.middleware.js";
+import { checkFeatureAccess } from "../middleware/checkFeatureAccess.middleware.js";
 
 
 /**
@@ -11,7 +12,7 @@ import { audioupload } from "../middleware/upload.middleware.js";
  * @description Generate an interview report for a candidate based on their resume, self description and job description
  * @access private
  */
-interviewRouter.post("/",authMiddleware,upload.single("resume"),interviewController.genrateInterviewReportController)
+interviewRouter.post("/",authMiddleware, checkFeatureAccess("resumeAnalysis"),upload.single("resume"),interviewController.genrateInterviewReportController)
 
 /**
  * @route GET /api/interview/report/:interviewId
@@ -39,7 +40,7 @@ interviewRouter.post("/schedule/:reportId",authMiddleware,interviewController.sc
  * @description start a scheduled interview for a candidate based on interviewId
  * @access private
  */
-interviewRouter.post("/start/:interviewId",authMiddleware,interviewController.startInterview);
+interviewRouter.post("/start/:interviewId",authMiddleware,checkFeatureAccess("mockInterview"),interviewController.startInterview);
 
 /**
  * @route POST /api/interview/answer/:interviewId

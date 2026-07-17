@@ -63,7 +63,92 @@ const userSchema = new mongoose.Schema(
             quickLearner: { type: Boolean, default: false },
             streakMaster: { type: Boolean, default: false },
             perfectScore: { type: Boolean, default: false }
-        }
+        },
+
+        subscription: {
+
+            plan: {
+                type: String,
+                enum: ["free", "pro"],
+                default: "free"
+            },
+
+            billingCycle: {
+                type: String,
+                enum: ["monthly", "yearly", null],
+                default: null
+            },
+
+            status: {
+                type: String,
+                enum: [
+                    "active",
+                    "expired",
+                    "cancelled"
+                ],
+                default: "active"
+            },
+
+            startDate: Date,
+
+            expiryDate: Date,
+
+            paymentProvider: {
+                type: String,
+                default: null
+            },
+
+            customerId: String,
+
+            subscriptionId: String
+
+        },
+
+        usage: {
+
+            resumeAnalysis: {
+
+                used: {
+                    type: Number,
+                    default: 0
+                },
+
+                limit: {
+                    type: Number,
+                    default: 1
+                }
+
+            },
+
+            mockInterview: {
+
+                used: {
+                    type: Number,
+                    default: 0
+                },
+
+                limit: {
+                    type: Number,
+                    default: 1
+                }
+
+            },
+
+            interviewFeedback: {
+
+                used: {
+                    type: Number,
+                    default: 0
+                },
+
+                limit: {
+                    type: Number,
+                    default: 1
+                }
+
+            }
+
+        },
     },
     { timestamps: true }
 );

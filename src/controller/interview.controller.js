@@ -5,14 +5,35 @@ import interviewAi from "../services/ai.services.js";
 import interviewReportModel from "../models/MockInterview/interviewReport.model.js";
 import InterviewSession from "../models/InterviewSession.js";
 import { transcribeAudio } from "../services/deepgram.service.js";
+import { incrementUsage } from "../services/usage.service.js";
 
 /**
  * @description controller to genrate interview report based on user self description, resume and job description.
  */
 async function genrateInterviewReportController(req, res) {
     try {
+        if (!req.file) {
+
+            return res.status(400).json({
+
+                message: "Resume PDF required."
+
+            });
+
+        }
+
         const resumeContent = await (new pdfParse.PDFParse(Uint8Array.from(req.file.buffer))).getText();
         const { selfDescription, jobDescription } = req.body;
+
+        if (!selfDescription || !jobDescription) {
+
+            return res.status(400).json({
+
+                message: "Missing required fields."
+
+            });
+
+        }
 
         const interviewReportByAi = await interviewAi.genrateInterviewReport({
             resume: resumeContent.text,
@@ -26,6 +47,7 @@ async function genrateInterviewReportController(req, res) {
             jobDescription,
             ...interviewReportByAi
         });
+        await incrementUsage(req.user.userId, "resumeAnalysis")
         res.status(201).json({
             message: "Interview report genrated successfully",
             interviewReport
@@ -138,6 +160,15 @@ async function startInterview(req, res) {
             })
         }
 
+        if (interview.status === "in-progress") {
+            return res.status(400).json({
+                message: "Interview already started"
+            });
+        }
+        await incrementUsage(
+            req.user.userId,
+            "mockInterview"
+        );
         interview.status = "in-progress";
         interview.currentQuestionIndex = 0;
         await interview.save();
@@ -224,9 +255,14 @@ async function submitAnswer(req, res) {
             };
 
             try {
+
                 feedback = await interviewAi.getInterviewFeedback(interview.answers);
+
             } catch (aiError) {
                 console.error("AI feedback generation failed:", aiError);
+                return res.status(500).json({
+                    message: "Unable to generate interview feedback."
+                });
             }
 
             interview.status = "completed";
